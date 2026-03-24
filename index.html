@@ -322,48 +322,29 @@
   }
 
   function fmt(val, ci) {
+    if (ci === 0) return val;
     const n = toNum(val);
-    if (isNaN(n) || ci === 0) return val;
+    if (ci === 1) return n.toLocaleString('en-GB');
     if (ci === 2) return n.toLocaleString('en-GB');
     if (ci === 3) return '£' + n.toLocaleString('en-GB');
     if (ci === 4) return n.toFixed(2);
     return val;
   }
 
-  function extractRow(record) {
-    // Handle both { key, value: { cgp_totals, ... } } and flat { cgp_totals, ... }
-    const r = (record && record.value) ? record.value : record;
-    return {
-      label:    r.cgp_totals || r.category || '',
-      customer: toNum(r.customer),
-      volume:   toNum(r.volume),
-      profit:   toNum(r.profit),
-      avg_unit: toNum(r.avg_unit)
-    };
-  }
-
-  function normaliseRecords(data) {
-    // Pipedream may return a single record or an object keyed by row name
-    const records = {};
-    if (!data) return records;
-
-    if (data.key && (data.value || data.cgp_totals)) {
-      // Single record
-      records[data.key] = data;
-    } else if (Array.isArray(data)) {
-      data.forEach(item => { if (item.key) records[item.key] = item; });
-    } else if (typeof data === 'object') {
-      // Could already be keyed object
-      Object.keys(data).forEach(k => { records[k] = data[k]; });
-    }
-    return records;
-  }
-
   function renderTable(data) {
-    const records = normaliseRecords(data);
+    // Filter to only our three data rows in the correct order
     const rows = ROW_ORDER
-      .filter(key => records[key])
-      .map(key => extractRow(records[key]));
+      .filter(key => data[key])
+      .map(key => {
+        const r = data[key];
+        return {
+          label:    r.cgp_totals || key,
+          customer: toNum(r.customer),
+          volume:   toNum(r.volume),
+          profit:   toNum(r.profit),
+          avg_unit: toNum(r.avg_unit)
+        };
+      });
 
     if (rows.length === 0) {
       document.getElementById('tableWrap').innerHTML =
@@ -371,13 +352,13 @@
       return;
     }
 
-    // Auto-calculate totals
+    // Auto-calculate totals from the three data rows
     const totalCustomer = rows.reduce((s, r) => s + r.customer, 0);
     const totalVolume   = rows.reduce((s, r) => s + r.volume,   0);
     const totalProfit   = rows.reduce((s, r) => s + r.profit,   0);
     const avgUnit       = rows.reduce((s, r) => s + r.avg_unit, 0) / rows.length;
 
-    // Build table
+    // Build table HTML
     let html = '<table><thead><tr>';
     HEADERS.forEach(h => { html += `<th>${h}</th>`; });
     html += '</tr></thead><tbody>';
@@ -387,6 +368,7 @@
       html += '<tr>' + cells.map((c, ci) => `<td>${fmt(c, ci)}</td>`).join('') + '</tr>';
     });
 
+    // Calculated total row
     const totalCells = ['Total', totalCustomer, totalVolume, totalProfit, avgUnit];
     html += '<tr class="total-row">' +
       totalCells.map((c, ci) => `<td>${fmt(c, ci)}</td>`).join('') +
@@ -397,7 +379,7 @@
   }
 
   function setStatus(ok, msg) {
-    document.getElementById('statusDot').className  = ok ? 'dot' : 'dot error';
+    document.getElementById('statusDot').className    = ok ? 'dot' : 'dot error';
     document.getElementById('statusText').textContent = msg;
   }
 
