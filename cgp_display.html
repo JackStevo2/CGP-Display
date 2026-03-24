@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CGP Totals Display</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue-deep:   #080f1e;
+      --blue-mid:    #0d2147;
+      --blue-accent: #1a4fd6;
+      --blue-bright: #2e6df5;
+      --blue-glow:   #4a8aff;
+      --blue-line:   #1a3460;
+      --gold:        #f0b429;
+      --gold-dim:    rgba(240,180,41,0.15);
+      --white:       #ffffff;
+      --white-80:    rgba(255,255,255,0.80);
+      --white-50:    rgba(255,255,255,0.50);
+      --white-15:    rgba(255,255,255,0.06);
+      --green:       #22c55e;
+      --red:         #ef4444;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--blue-deep);
+      font-family: 'Barlow', sans-serif;
+      color: var(--white);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(46,109,245,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(46,109,245,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -30%; left: 50%;
+      transform: translateX(-50%);
+      width: 90vw; height: 70vh;
+      background: radial-gradient(ellipse, rgba(26,79,214,0.2) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      width: 100vw; height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+      padding: 44px 72px;
+      z-index: 1;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease 0.1s forwards;
+    }
+
+    .header-left { display: flex; flex-direction: column; gap: 6px; }
+
+    .eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--blue-glow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 24px; height: 2px;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+
+    .title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(36px, 4.5vw, 58px);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      line-height: 1;
+      color: var(--white);
+    }
+
+    .title em { font-style: normal; color: var(--gold); }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .timestamp {
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--white-50);
+      letter-spacing: 0.06em;
+    }
+
+    .badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--blue-glow);
+      background: rgba(74,138,255,0.1);
+      border: 1px solid var(--blue-line);
+      padding: 5px 14px;
+      border-radius: 20px;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--blue-accent) 25%, transparent 75%);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeIn 0.5s ease 0.4s forwards;
+    }
+
+    .table-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      animation: fadeUp 0.7s ease 0.5s forwards;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead tr {
+      background: linear-gradient(90deg, var(--blue-accent) 0%, var(--blue-mid) 100%);
+      border-bottom: 2px solid var(--gold);
+    }
+
+    thead th {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(13px, 1.5vw, 17px);
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--white);
+      padding: 15px 28px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    thead th:not(:first-child) { text-align: right; }
+
+    tbody tr { border-bottom: 1px solid var(--blue-line); }
+    tbody tr:nth-child(even) { background: var(--white-15); }
+
+    tbody td {
+      font-size: clamp(15px, 1.8vw, 22px);
+      font-weight: 400;
+      color: var(--white-80);
+      padding: 20px 28px;
+      text-align: left;
+    }
+
+    tbody td:not(:first-child) {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(16px, 2vw, 26px);
+      font-weight: 500;
+      color: var(--white);
+      text-align: right;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr.total-row {
+      background: var(--gold-dim);
+      border-top: 1px solid rgba(240,180,41,0.4);
+      border-bottom: none;
+    }
+
+    tbody tr.total-row td {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: clamp(16px, 2vw, 26px);
+      color: var(--gold);
+      letter-spacing: 0.07em;
+      padding-top: 22px;
+      padding-bottom: 22px;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--blue-line);
+      opacity: 0;
+      animation: fadeIn 0.5s ease 0.9s forwards;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--white-50);
+      letter-spacing: 0.06em;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      flex-shrink: 0;
+      animation: pulse 2.5s ease infinite;
+    }
+
+    .dot.error {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: none;
+    }
+
+    .countdown {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--white-50);
+      letter-spacing: 0.06em;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 0;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--blue-glow);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">Performance Dashboard</div>
+      <div class="title">CGP <em>Totals</em></div>
+    </div>
+    <div class="header-right">
+      <div class="timestamp" id="timestamp">Fetching data…</div>
+      <div class="badge">Auto-refresh · 30 min</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="table-wrap" id="tableWrap">
+    <div class="loading">Loading data…</div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Connecting…</span>
+    </div>
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+</div>
+
+<script>
+  const PIPEDREAM_URL = 'https://eonlgargaerq091.m.pipedream.net';
+  const REFRESH_MS    = 30 * 60 * 1000;
+  const HEADERS       = ['CGP Totals', 'Customer', 'Volume', 'Profit (£pa)', 'AVG Unit'];
+  const ROW_ORDER     = ['Power', 'Gas', 'Utility Connections'];
+
+  let nextRefresh  = null;
+  let countdownInt = null;
+
+  function toNum(val) {
+    return parseFloat(String(val).replace(/,/g, '')) || 0;
+  }
+
+  function fmt(val, ci) {
+    if (ci === 0) return val;
+    const n = toNum(val);
+    if (ci === 1) return n.toLocaleString('en-GB');
+    if (ci === 2) return n.toLocaleString('en-GB');
+    if (ci === 3) return '£' + n.toLocaleString('en-GB');
+    if (ci === 4) return n.toFixed(2);
+    return val;
+  }
+
+  function renderTable(data) {
+    // Filter to only our three data rows in the correct order
+    const rows = ROW_ORDER
+      .filter(key => data[key])
+      .map(key => {
+        const r = data[key];
+        return {
+          label:    r.cgp_totals || key,
+          customer: toNum(r.customer),
+          volume:   toNum(r.volume),
+          profit:   toNum(r.profit),
+          avg_unit: toNum(r.avg_unit)
+        };
+      });
+
+    if (rows.length === 0) {
+      document.getElementById('tableWrap').innerHTML =
+        '<div class="loading">No data found — check Pipedream data store</div>';
+      return;
+    }
+
+    // Auto-calculate totals from the three data rows
+    const totalCustomer = rows.reduce((s, r) => s + r.customer, 0);
+    const totalVolume   = rows.reduce((s, r) => s + r.volume,   0);
+    const totalProfit   = rows.reduce((s, r) => s + r.profit,   0);
+    const avgUnit       = rows.reduce((s, r) => s + r.avg_unit, 0) / rows.length;
+
+    // Build table HTML
+    let html = '<table><thead><tr>';
+    HEADERS.forEach(h => { html += `<th>${h}</th>`; });
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(r => {
+      const cells = [r.label, r.customer, r.volume, r.profit, r.avg_unit];
+      html += '<tr>' + cells.map((c, ci) => `<td>${fmt(c, ci)}</td>`).join('') + '</tr>';
+    });
+
+    // Calculated total row
+    const totalCells = ['Total', totalCustomer, totalVolume, totalProfit, avgUnit];
+    html += '<tr class="total-row">' +
+      totalCells.map((c, ci) => `<td>${fmt(c, ci)}</td>`).join('') +
+      '</tr>';
+
+    html += '</tbody></table>';
+    document.getElementById('tableWrap').innerHTML = html;
+  }
+
+  function setStatus(ok, msg) {
+    document.getElementById('statusDot').className    = ok ? 'dot' : 'dot error';
+    document.getElementById('statusText').textContent = msg;
+  }
+
+  function startCountdown() {
+    if (countdownInt) clearInterval(countdownInt);
+    nextRefresh  = Date.now() + REFRESH_MS;
+    countdownInt = setInterval(() => {
+      const rem = Math.max(0, nextRefresh - Date.now());
+      const m   = Math.floor(rem / 60000);
+      const s   = Math.floor((rem % 60000) / 1000).toString().padStart(2, '0');
+      document.getElementById('countdown').textContent = `Next refresh in ${m}m ${s}s`;
+    }, 1000);
+  }
+
+  async function fetchAndRender() {
+    setStatus(true, 'Fetching data…');
+    try {
+      const res  = await fetch(PIPEDREAM_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderTable(data);
+      const now  = new Date();
+      document.getElementById('timestamp').textContent =
+        `Last updated: ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+      setStatus(true, 'Live — data up to date');
+      startCountdown();
+    } catch (err) {
+      console.error(err);
+      setStatus(false, 'Connection error — retrying next cycle');
+      document.getElementById('timestamp').textContent = 'Update failed';
+    }
+  }
+
+  fetchAndRender();
+  setInterval(fetchAndRender, REFRESH_MS);
+</script>
+</body>
+</html>
